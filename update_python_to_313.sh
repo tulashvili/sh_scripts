@@ -2,79 +2,108 @@
 set -e
 
 # === Цвета ===
+
 G='\033[0;32m'; Y='\033[1;33m'; R='\033[0;31m'; NC='\033[0m'
 log() { echo -e "${G}[+] $1${NC}"; }
 warn() { echo -e "${Y}[!] $1${NC}"; }
 error() { echo -e "${R}[ERROR] $1${NC}"; exit 1; }
 
 # === Переменные ===
+
 PYENV_ROOT="/usr/local/pyenv"
 PYTHON_VERSION="3.13.0"
 
+# === 0. Проверка ОС и правка sources.list для Buster ===
+
+if [ -f /etc/debian_version ]; then
+DEBIAN_VER=$(cut -d'.' -f1 /etc/debian_version)
+if [ "$DEBIAN_VER" = "10" ]; then
+log "Обнаружен Debian Buster. Исправляем /etc/apt/sources.list..."
+cp /etc/apt/sources.list /etc/apt/sources.list.bak
+cat > /etc/apt/sources.list <<EOF
+deb [http://archive.debian.org/debian](http://archive.debian.org/debian) buster main contrib non-free
+deb [http://archive.debian.org/debian-security](http://archive.debian.org/debian-security) buster/updates main contrib non-free
+deb [http://archive.debian.org/debian](http://archive.debian.org/debian) buster-updates main contrib non-free
+EOF
+# Для использования старых репозиториев без проверки GPG
+echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
+fi
+fi
+
 # === 1. Установка зависимостей ===
+
 log "Установка зависимостей..."
 apt update
-apt install -y \
-    build-essential libssl-dev zlib1g-dev libbz2-dev \
-    libreadline-dev libsqlite3-dev wget curl llvm \
-    libncursesw5-dev xz-utils tk-dev libxml2-dev \
-    libxmlsec1-dev libffi-dev liblzma-dev git ca-certificates
+apt install -y 
+build-essential libssl-dev zlib1g-dev libbz2-dev 
+libreadline-dev libsqlite3-dev wget curl llvm 
+libncursesw5-dev xz-utils tk-dev libxml2-dev 
+libxmlsec1-dev libffi-dev liblzma-dev git ca-certificates
 
 # === 2. Установка pyenv ===
+
 log "Установка pyenv в $PYENV_ROOT..."
 if [ -d "$PYENV_ROOT" ]; then
-    cd "$PYENV_ROOT" && git pull >/dev/null 2>&1
+cd "$PYENV_ROOT" && git pull >/dev/null 2>&1
 else
-    git clone https://github.com/pyenv/pyenv.git "$PYENV_ROOT"
+git clone [https://github.com/pyenv/pyenv.git](https://github.com/pyenv/pyenv.git) "$PYENV_ROOT"
 fi
 
 # Сборка pyenv
+
 cd "$PYENV_ROOT"
 if [ -f "src/Makefile" ]; then
-    make -C src >/dev/null 2>&1 || true
+make -C src >/dev/null 2>&1 || true
 else
-    src/configure && make -C src
+src/configure && make -C src
 fi
 
 # === 3. Активация pyenv в текущей сессии ===
+
 log "Активация pyenv..."
 export PYENV_ROOT="$PYENV_ROOT"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 
 # === 4. Установка Python 3.13.0 ===
+
 log "Установка Python $PYTHON_VERSION..."
 if pyenv versions | grep -q "$PYTHON_VERSION"; then
-    warn "Python $PYTHON_VERSION уже установлен. Пропускаем."
+warn "Python $PYTHON_VERSION уже установлен. Пропускаем."
 else
-    PYENV_ROOT="$PYENV_ROOT" pyenv install "$PYTHON_VERSION"
+PYENV_ROOT="$PYENV_ROOT" pyenv install "$PYTHON_VERSION"
 fi
 
 # === 5. Глобальная версия ===
+
 log "Установка глобальной версии: $PYTHON_VERSION"
 PYENV_ROOT="$PYENV_ROOT" pyenv global "$PYTHON_VERSION"
 
 # === 6. Настройка для всех пользователей ===
+
 log "Настройка /etc/bash.bashrc..."
 {
-    echo
-    echo "# === pyenv ==="
-    echo "export PYENV_ROOT=\"$PYENV_ROOT\""
-    echo "export PATH=\"\$PYENV_ROOT/bin:\$PATH\""
-    echo 'eval "$(pyenv init --path)"'
-    echo 'eval "$(pyenv init -)"'
+echo
+echo "# === pyenv ==="
+echo "export PYENV_ROOT="$PYENV_ROOT""
+echo "export PATH="$PYENV_ROOT/bin:$PATH""
+echo 'eval "$(pyenv init --path)"'
+echo 'eval "$(pyenv init -)"'
 } >> /etc/bash.bashrc
 
 # === 7. Права ===
+
 log "Исправление прав..."
 chown -R root:root "$PYENV_ROOT"
 chmod -R 755 "$PYENV_ROOT/shims" "$PYENV_ROOT/versions"
 
 # === 8. Обновление pip ===
+
 log "Обновление pip..."
 pip install --upgrade pip
 
 # === 9. Финальная проверка ===
+
 log "ПРОВЕРКА УСТАНОВКИ:"
 echo "----------------------------------------"
 python -V
