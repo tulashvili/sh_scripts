@@ -21,12 +21,10 @@ if [ "$DEBIAN_VER" = "10" ]; then
 log "Обнаружен Debian Buster. Исправляем /etc/apt/sources.list..."
 cp /etc/apt/sources.list /etc/apt/sources.list.bak
 cat > /etc/apt/sources.list <<EOF
-deb [http://archive.debian.org/debian](http://archive.debian.org/debian) buster main contrib non-free
-deb [http://archive.debian.org/debian-security](http://archive.debian.org/debian-security) buster/updates main contrib non-free
-deb [http://archive.debian.org/debian](http://archive.debian.org/debian) buster-updates main contrib non-free
+deb http://archive.debian.org/debian buster main contrib non-free
+deb http://archive.debian.org/debian-security buster/updates main contrib non-free
+deb http://archive.debian.org/debian buster-updates main contrib non-free
 EOF
-# Для использования старых репозиториев без проверки GPG
-echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 fi
 fi
 
